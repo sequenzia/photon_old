@@ -551,38 +551,29 @@ class Gamma():
 
         msg = f'\n'
 
-        msg += f' --------------------- {branch.network.name} ----------------------'
-
-        msg += f'\n\n'
-        msg += f'   Tree: {branch.trees[tree_idx].name} |'
-        msg += f' Branch: {branch.name} |'
-        msg += f' photon_id: {photon_id}  '
-
-        msg += f'\n\n'
-        msg += f'   n_chains: {n_chains} |'
-        msg += f' epochs: {n_epochs} |'
-        msg += f' batch_size: {batch_size} '
-
-        msg += f'\n\n'
-        msg += f'   train_days: {train_days} |'
-        msg += f' val_days: {val_days} |'
-        msg += f' test_days: {test_days}'
-
-        # msg += f'\n\n'
-        # msg += f'\t n_batches: {n_batches} |'
-        # msg += f' n_steps: {n_steps} |'
-        # msg += f' seq_len: {seq_len} |'
-
-        # msg += f'\n\n'
-        # msg += f' seq_len: {seq_len} |'
-        # msg += f' strategy: {branch.network.strat} |'
+        msg += f' ------------------- {branch.network.name} -------------------'
 
         msg += f'\n\n'
 
-        msg += f' -------------------------------------------------'
+        msg += f'   Photon ID: {photon_id} |'
+        msg += f' Tree: {branch.trees[tree_idx].name} |'
+        msg += f' Branch: {branch.name} '
+
+        msg += f'\n\n'
+        msg += f'   Epochs: {n_epochs} |'
+        msg += f' Chains: {n_chains} |'
+        msg += f' Batch Size: {batch_size} '
+
+        msg += f'\n\n'
+        msg += f'   Train Days: {train_days} |'
+        msg += f' Val Days: {val_days} |'
+        msg += f' Test Days: {test_days}'
+
+        msg += f'\n\n'
+
+        msg += f' -------------------------------------------------------'
 
         tf.print(msg)
-        # tf.print(f'\n')
 
     def epoch_msg(self, branch, epoch_idx):
 

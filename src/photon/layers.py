@@ -77,7 +77,6 @@ class Layers(tf_Layer):
         self.reg_vals = self.gauge.model_args['reg_vals']
 
         self.layers_logs_on = 0
-            # self.gauge.chain.logs_on['layers']
 
         self.gauge.chain.idx_gen.append(self)
         self.layer_idx = len(self.gauge.chain.idx_gen) - 1

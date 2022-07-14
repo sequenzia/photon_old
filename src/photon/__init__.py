@@ -133,7 +133,6 @@ class Photon():
 class Networks():
 
     def __init__(self,
-                 name,
                  photon_id,
                  data_dir,
                  data_fn,
@@ -143,12 +142,18 @@ class Networks():
                  dirs_on,
                  diag_on,
                  msgs_on,
+                 name=None,
                  photon=None,
                  float_x=32):
 
         self.is_built = False
 
         self.photon_load_id = photon_id
+
+        if name is None:
+            self.name = 'Photon Network'
+        else:
+            self.name = name
 
         if photon is None:
             self.photon = Photon()
@@ -158,8 +163,6 @@ class Networks():
         self.photon.setup_photon(self.photon_load_id)
 
         self.gamma = self.photon.Gamma(self)
-
-        self.name = name
 
         self.x_groups_on = x_groups_on
 
@@ -428,7 +431,6 @@ class Networks():
 class Trees():
 
     def __init__(self,
-                 name,
                  batch_size,
                  train_days,
                  test_days,
@@ -439,10 +441,11 @@ class Trees():
                  test_on,
                  val_on,
                  masking,
-                 base_type,
                  shuffle,
                  preproc,
                  seed,
+                 name=None,
+                 samples_pd=None,
                  photon=None,
                  network=None,
                  network_config=None):
@@ -454,7 +457,10 @@ class Trees():
         else:
             self.network = network
 
-        self.name = name
+        if name is None:
+            self.name = 'Photon Tree'
+        else:
+            self.name = name
 
         self.val_on = val_on
         self.test_on = test_on
@@ -477,13 +483,6 @@ class Trees():
         self.data.test_days = test_days
         self.data.val_days = val_days
 
-        self.data.base_type = base_type
-
-        if self.data.base_type == 'krypton':
-            self.data.samples_pd = 2
-        else:
-            self.data.samples_pd = int(23400 / self.data.res)
-
         self.data.masking = masking
 
         self.data.shuffle = shuffle
@@ -493,6 +492,12 @@ class Trees():
         self.data.batch_size = batch_size
 
         self.data.feature_cols = ['x_cols', 'c_cols']
+
+        if samples_pd is None:
+
+            self.data.samples_pd = int(23400 / self.data.res)
+        else:
+            self.data.samples_pd = samples_pd
 
     def load_data(self):
 
@@ -670,8 +675,6 @@ class Trees():
 
     def setup_stores(self, data_type):
 
-        # self.data.setup_log = {'close_loop': []}
-
         self.data.store[data_type]['config']['n_samples'] = \
             self.data.samples_pd * self.data.store[data_type]['config']['n_days']
 
@@ -835,7 +838,6 @@ class Branches():
 
     def __init__(self,
                  trees,
-                 name,
                  n_epochs,
                  n_chains,
                  model_config,
@@ -844,9 +846,9 @@ class Branches():
                  opt_config,
                  loss_config,
                  metrics_config,
-                 output_config,
                  run_config,
                  save_config,
+                 name=None,
                  **kwargs):
 
         self.is_built = False
@@ -856,8 +858,12 @@ class Branches():
         self.network = self.trees[0].network
         self.photon = self.network.photon
 
+        if name is None:
+            self.name = 'Photon Branch'
+        else:
+            self.name = name
+
         self.n_epochs = n_epochs
-        self.name = name
 
         self.n_chains = n_chains
         self.chains = []
@@ -878,7 +884,6 @@ class Branches():
                                     opt_config=opt_config,
                                     loss_config=loss_config,
                                     metrics_config=metrics_config,
-                                    output_config=output_config,
                                     run_config=run_config,
                                     save_config=save_config)
 
@@ -905,7 +910,6 @@ class Branches():
         opt_config: List
         loss_config: List
         metrics_config: List
-        output_config: List
         run_config: List
         save_config: List
 
