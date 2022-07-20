@@ -17,3 +17,5 @@ A end-to-end Machine Learning ramework that extends the functionality of other f
 
 ---
 **Photon ML Examples:** https://github.com/sequenzia/photon_examples
+
+**A Collection of Algorthims/Models designed with Photon ML:** https://github.com/sequenzia/dyson
