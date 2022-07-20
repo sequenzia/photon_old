@@ -259,7 +259,12 @@ class Gamma():
 
                 with tf.device('/GPU:' + str(device_idx)):
 
-                    step_data = model.src(inputs=batch_data['inputs'], training=True, batch_idx=batch_idx)
+                    step_data = model.src(inputs=batch_data['inputs'],
+                                          training=True,
+                                          batch_idx=batch_idx,
+                                          targets=batch_data['targets'],
+                                          tracking=batch_data['tracking'])
+
                     step_data = self.run_splits(model, step_data, batch_data)
                     step_data = self.run_loss(model, step_data)
 
@@ -272,16 +277,19 @@ class Gamma():
                     # -- save lr -- #
                     step_data['learning_rates'] = model.src.optimizer.lr_sch.cur_lr
 
-                    # model.chain.step_data_logs.append(step_data)
-
-                    # ---- non-training steps ---- #
+        # ---- non-training steps ---- #
         if model.live.run_type in ['infer', 'pred', 'val']:
 
             model.live.is_training = False
 
             with tf.device('/GPU:' + str(device_idx)):
 
-                step_data = model.src(inputs=batch_data['inputs'], training=True, batch_idx=batch_idx)
+                step_data = model.src(inputs=batch_data['inputs'],
+                                      training=True,
+                                      batch_idx=batch_idx,
+                                      targets=batch_data['targets'],
+                                      tracking=batch_data['tracking'])
+
                 step_data = self.run_splits(model, step_data, batch_data)
                 step_data = self.run_loss(model, step_data)
 

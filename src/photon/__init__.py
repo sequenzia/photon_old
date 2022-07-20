@@ -642,7 +642,6 @@ class Trees():
             val_ed_day = val_st_day + val_days
 
         # --- reduce full bars by number of days --- #
-
         self.data.store['train']['full_bars'] = \
             self.data.full_bars[(self.data.full_bars['day_idx'] >= (train_st_day - self.data.seq_days)) &
                                 (self.data.full_bars['day_idx'] < train_ed_day)].copy()
@@ -705,11 +704,6 @@ class Trees():
                                  (full_bars['bar_idx'] <= _ed_idx)]
 
             model_bars.append(seq_bars.to_numpy())
-
-            # self.data.setup_log['close_loop'].append(
-            #     {'specs': {'bar': _bar, 'st_idx':_st_idx ,'ed_idx':_ed_idx},
-            #      'seq_bars': seq_bars,
-            #      'model_bars': model_bars})
 
         # -- concat model bars -- #
         model_bars = np.concatenate(model_bars, axis=0)

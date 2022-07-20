@@ -3,7 +3,7 @@ import sys
 from typing import List, Tuple, Dict, Optional
 from photon import Photon, layers
 
-from photon.utils import np_exp
+from photon.utils import np_exp, args_key_chk
 
 import tensorflow as tf
 from tensorflow import keras as tfk
@@ -99,7 +99,9 @@ class Models(tf_Model):
 
                           output_stream=sys.stdout, sep=' ', end='\n')
 
-            return self.call(inputs)
+            return self.call(inputs,
+                             targets=args_key_chk(kwargs,'targets'),
+                             tracking=args_key_chk(kwargs, 'tracking'))
 
     def pre_build(self, input_data):
 

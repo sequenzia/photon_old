@@ -550,12 +550,7 @@ class RNN(Layers):
         # -- logging -- #
         if self.logs_on:
 
-            _specs =  {'epoch_idx': self.gauge.cur_run.epoch_idx.numpy(),
-                       'batch_idx': self.gauge.cur_run.batch_idx.numpy()}
-
-            _log = {
-                'specs': _specs,
-                'inputs': np_exp(inputs),
+            _log = {'inputs': np_exp(inputs),
                 'state_0_pre': state_0_pre,
                 'state_1_pre': state_1_pre,
                 'state_0_post': state_0_post,

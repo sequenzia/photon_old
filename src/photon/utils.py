@@ -67,6 +67,12 @@ def list_exp(obj, strat=None, to_numpy=True, reduce=None, axis=None):
 
     return obj_out
 
+def args_key_chk(args, key, default=None):
+    if key in args:
+        return args[key]
+    else:
+        return default
+
 def config_block_mask(off_blocks=None):
 
     ''' mask on means block should be utilized, mask off means it will be skipped '''
