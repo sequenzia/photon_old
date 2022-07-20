@@ -1,5 +1,5 @@
 # Photon: Machine Learning Framework
-A machine learning framework that extends the functionality of other frameworks such as TensorFlow & Keras. Photon ML is built to apply neural network and ensemble modeling techniques for deep learning financial algorithms. The framework supports the entire lifecycle of a machine learning project including data preparation, model development, training, monitoring, evaluation and deployment.
+A end-to-end Machine Learning ramework that extends the functionality of other frameworks such as TensorFlow & Keras. Photon ML is built to apply neural network and ensemble modeling techniques for deep learning financial algorithms. The framework supports the entire lifecycle of a machine learning project including data preparation, model development, training, monitoring, evaluation and deployment.
 
 **Key Features of Photon ML:**
 
