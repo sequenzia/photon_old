@@ -612,6 +612,9 @@ class Trees():
         if 'c_cols' not in self.data.feature_cols:
             self.data.input_shape = (self.data.seq_depth, self.data.n_x_cols)
 
+        self.data.targets_shape = (self.data.seq_depth, self.data.n_y_cols)
+        self.data.tracking_shape = (self.data.seq_depth, self.data.n_t_cols)
+
     def split_bars(self, _types):
 
         train_days = self.data.store['train']['config']['n_days']
@@ -1012,6 +1015,16 @@ class Chains():
                                              dtype=self.network.float_x,
                                              name=self.name + '_input_data')
 
+            self.targets_data = tf.keras.Input(shape=self.trees[0].data.targets_shape,
+                                               batch_size=self.trees[0].data.batch_size,
+                                               dtype=self.network.float_x,
+                                               name=self.name + '_targets_data')
+
+            self.tracking_data = tf.keras.Input(shape=self.trees[0].data.tracking_shape,
+                                                batch_size=self.trees[0].data.batch_size,
+                                                dtype=self.network.float_x,
+                                                name=self.name + '_tracking_data')
+
         # --- setup gauge/models --- #
         for model_idx in range(self.n_models):
 
@@ -1148,7 +1161,8 @@ class Gauge():
                          'val': None,
                          'test': None}
 
-        # -- setup strats -- #
+        self.logs = self.Logs()
+
         self.setup_strats()
 
     def setup_strats(self):
@@ -1289,86 +1303,16 @@ class Gauge():
         if not self.is_compiled:
             self.compile_gauge()
 
-        self.src.pre_build(input_data=self.chain.input_data)
+        self.src.pre_build(input_data=self.chain.input_data,
+                           targets_data=self.chain.targets_data,
+                           tracking_data=self.chain.tracking_data)
 
-    def run_steps(self):
+    @dataclass
+    class Logs:
 
-        # self.run_train_steps(inputs)
-
-        return
-
-    def run_train_steps_(self, inputs, targets, batch_idx):
-
-        # tf.print('-- ',self.name, self.run_train_steps.experimental_get_tracing_count())
-                 # , batch_idx, inputs.shape, targets.shape, '\n')
-
-        batch_size = self.chain.branch.trees[0].data.batch_size
-
-        # --- load tape --- #
-        with tf.GradientTape() as tape:
-
-            # -- run model -- #
-            step_data = self.src(inputs=inputs, training=True, batch_idx=batch_idx)
-
-            # -- slice y_true -- #
-            step_data['y_true'] = targets[self.chain.data_config['targets']['true_slice']]
-
-            # -- slice y_tracking
-            step_data['y_tracking'] = targets[self.chain.data_config['targets']['tracking_slice']]
-
-            # -- step loss -- #
-            step_data['step_loss'] = self.loss_fn(step_data['y_true'], step_data['y_hat'])
-            step_data['step_loss'] = tf.nn.compute_average_loss(step_data['step_loss'], global_batch_size=batch_size)
-
-            # -- model loss -- #
-            step_data['model_loss'] = sum(self.src.losses)
-
-            # -- full loss -- #
-            step_data['full_loss'] = tf.add(step_data['step_loss'], step_data['model_loss'])
-
-            # -- run grads -- #
-            step_data['step_grads'] = tape.gradient(step_data['step_loss'], self.src.trainable_variables)
-
-            # -- apply grads -- #
-            self.src.optimizer.apply_gradients(zip(step_data['step_grads'], self.src.trainable_variables))
-
-            # -- save lr -- #
-            step_data['learning_rates'] = self.src.optimizer.lr_sch.cur_lr
-
-        return step_data
-
-    def run_preds_steps_(self):
-
-        tf.print('-- VAL --- ',self.name, self.run_preds_steps.python_function)
-                 # batch_idx, inputs.shape, targets.shape, '\n')
-
-        # batch_size = self.chain.branch.trees[0].data.batch_size
-
-        # -- run model -- #
-        # step_data = self.src(inputs=inputs, training=False, batch_idx=batch_idx)
-
-        some_data = ['sss']
-
-        # # -- slice y_true -- #
-        # step_data['y_true'] = targets[model.chain.data_config['targets']['true_slice']]
-        #
-        # # -- slice y_tracking
-        # step_data['y_tracking'] = targets[model.chain.data_config['targets']['tracking_slice']]
-        #
-        # # -- step loss -- #
-        # step_data['step_loss'] = model.gauge.loss_fn(step_data['y_true'], step_data['y_hat'])
-        # step_data['step_loss'] = tf.nn.compute_average_loss(step_data['step_loss'], global_batch_size=batch_size)
-        #
-        # # -- model loss -- #
-        # step_data['model_loss'] = sum(model.losses)
-        #
-        # # -- full loss -- #
-        # step_data['full_loss'] = tf.add(step_data['step_loss'], step_data['model_loss'])
-        #
-        # step_data['step_grads'] = None
-        # step_data['learning_rates'] = None
-
-        return some_data
+        calls: List = field(default_factory=lambda: {'main':[[]],'val':[[]]})
+        layers: List = field(default_factory=lambda: {'main':[[]],'val':[[]]})
+        run_data: List = field(default_factory=lambda: {'main':[[]],'val':[[]]})
 
 class Theta:
 

@@ -76,8 +76,6 @@ class Layers(tf_Layer):
         self.norm_args = norm_args
         self.reg_vals = self.gauge.model_args['reg_vals']
 
-        self.layers_logs_on = 0
-
         self.gauge.chain.idx_gen.append(self)
         self.layer_idx = len(self.gauge.chain.idx_gen) - 1
 
@@ -144,8 +142,23 @@ class Layers(tf_Layer):
         # -- call layer -- #
         z_output = self.call(inputs, training=training)
 
-        if self.layers_logs_on:
-            self.log_call(self.layer_nm, inputs, z_output)
+        if self.gauge.is_model_built and self.gauge.src.log_layers and not self.no_log:
+
+            if self.gauge.src.log_layers in ['summary','min','shapes']:
+                log_level = 'summary'
+            else:
+                log_level = 'full'
+
+            self.log_call(self.layer_nm, inputs, z_output, 'main', log_level)
+
+        if self.gauge.is_model_built and self.gauge.src.log_layers_val and not self.no_log:
+
+            if self.gauge.src.log_layers_val in ['summary','min','shapes']:
+                log_level_val = 'summary'
+            else:
+                log_level_val = 'full'
+
+            self.log_call(self.layer_nm, inputs, z_output, 'val', log_level_val)
 
         # -- call reg -- #
         if self.reg_on:
@@ -167,81 +180,75 @@ class Layers(tf_Layer):
 
         return z_output
 
-    def log_call(self, layer_nm, inputs, z_output):
+    def log_call(self, layer_nm, inputs, z_output, log_type, log_level):
 
-        if self.gauge.cur_run.data_type == 'train' and not self.no_log:
+        chain_idx = self.gauge.chain_idx
+        epoch_idx =  self.gauge.run_model.live.epoch_idx
+        batch_idx =  self.gauge.run_model.live.batch_idx
 
-            chain_idx = self.gauge.cur_run.chain_idx
-            epoch_idx =  self.gauge.cur_run.epoch_idx
-            batch_idx =  self.gauge.cur_run.batch_idx
+        log_in = inputs
+        log_out = z_output
 
-            log_in = inputs
-            log_out = z_output
+        log_in_sh = []
+        log_out_sh = []
 
-            log_in_sh = []
-            log_out_sh = []
+        if isinstance(log_in, list):
 
-            if isinstance(log_in, list):
+            for _in_log in log_in:
+                log_in_sh.append(_in_log.shape.as_list())
 
-                for _in_log in log_in:
-                    log_in_sh.append(_in_log.shape.as_list())
+        else:
 
-            else:
+            log_in_sh = log_in.shape.as_list()
 
-                log_in_sh = log_in.shape.as_list()
+            if log_level == 'full':
+                if log_in.__class__.__name__ == 'EagerTensor':
+                    log_in = log_in.numpy()
+                else:
+                    log_in = log_in
 
-                if self.layers_logs_on == 1:
-                    if log_in.__class__.__name__ == 'EagerTensor':
-                        log_in = log_in.numpy()
-                    else:
-                        log_in = log_in
+        if isinstance(log_out, list):
 
-            if isinstance(log_out, list):
+            for _out_log in log_out:
+                log_out_sh.append(_out_log.shape.as_list())
+        else:
+            log_out_sh = log_out.shape.as_list()
 
-                for _out_log in log_out:
-                    log_out_sh.append(_out_log.shape.as_list())
-            else:
-                log_out_sh = log_out.shape.as_list()
+            if log_level == 'full':
 
-                if self.layers_logs_on == 1:
+                if log_out.__class__.__name__ == 'EagerTensor':
+                    log_out = log_out.numpy()
+                else:
+                    log_out = log_out
 
-                    if log_out.__class__.__name__ == 'EagerTensor':
-                        log_out = log_out.numpy()
-                    else:
-                        log_out = log_out
+        if log_level == 'full':
 
-            if self.layers_logs_on == 1:
+            log_data = {'step': [chain_idx, epoch_idx, batch_idx],
+                        'layer': self,
+                        'layer_idx': self.layer_idx,
+                        'layer_name': layer_nm,
+                        'in_shape': log_in_sh,
+                        'out_shape': log_out_sh,
+                        'input': log_in,
+                        'output': log_out,
+                        'loss': [_loss.numpy() for _loss in self.losses]}
 
-                log_data = {
-                    'step': [chain_idx, epoch_idx, batch_idx],
-                    'layer': self,
-                    'layer_idx': self.layer_idx,
-                    'layer_name': layer_nm,
-                    'in_shape': log_in_sh,
-                    'out_shape': log_out_sh,
-                    'input': log_in,
-                    'output': log_out,
-                    'loss': [_loss.numpy() for _loss in self.losses]
-                }
+        if log_level == 'summary':
 
-            if self.layers_logs_on == 2:
+            log_data = {'layer': self,
+                        'layer_idx': self.layer_idx,
+                        'layer_name': layer_nm,
+                        'in_shape': log_in_sh,
+                        'out_shape': log_out_sh}
 
-                log_data = {
-                    'layer': self,
-                    'layer_idx': self.layer_idx,
-                    'layer_name': layer_nm,
-                    'in_shape': log_in_sh,
-                    'out_shape': log_out_sh
-                }
+        if len(self.gauge.logs.layers[log_type]) <= epoch_idx:
+            self.gauge.logs.layers[log_type].append([])
 
-            if len(self.gauge.logs.layers) <= epoch_idx:
-                self.gauge.logs.layers.append([])
+        if len(self.gauge.logs.layers[log_type][epoch_idx]) <= batch_idx:
+            self.gauge.logs.layers[log_type][epoch_idx].append([])
 
-            if len(self.gauge.logs.layers[epoch_idx]) <= batch_idx:
-                self.gauge.logs.layers[epoch_idx].append([])
-
-            # -- log_data to save output -- #
-            self.gauge.logs.layers[epoch_idx][batch_idx].append(log_data)
+        # -- log_data to save output -- #
+        self.gauge.logs.layers[log_type][epoch_idx][batch_idx].append(log_data)
 
     def save_layer_log(self, _log):
 

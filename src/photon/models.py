@@ -37,6 +37,19 @@ class Models(tf_Model):
         self.seed = self.gauge.model_args['seed']
         self.show_calls = self.gauge.model_args['show_calls']
 
+        log_calls_config = args_key_chk(self.gauge.model_args['log_config'], 'log_calls', [])
+        log_layers_config = args_key_chk(self.gauge.model_args['log_config'], 'log_layers', [])
+        log_run_data_config = args_key_chk(self.gauge.model_args['log_config'], 'log_run_data', [])
+
+        self.log_calls = args_key_chk(log_calls_config, 'main', False)
+        self.log_calls_val = args_key_chk(log_calls_config, 'val', False)
+
+        self.log_layers = args_key_chk(log_layers_config, 'main', False)
+        self.log_layers_val = args_key_chk(log_layers_config, 'val', False)
+
+        self.log_run_data = args_key_chk(log_run_data_config, 'main', False)
+        self.log_run_data_val = args_key_chk(log_run_data_config, 'val', False)
+
         self.model_idx = self.gauge.model_idx
         self.chain = self.gauge.chain
         self.chain_idx = self.chain.chain_idx
@@ -50,8 +63,8 @@ class Models(tf_Model):
         self.is_val = None
         self.is_training = None
 
-        self.layer_logs = []
-        self.rd_logs = []
+        self.call_logs = {'main': [], 'val': []}
+        self.run_data_logs = {'main': [], 'val': []}
 
         self.reg_layers = {}
         self.norm_layers = {}
@@ -103,7 +116,7 @@ class Models(tf_Model):
                              targets=args_key_chk(kwargs,'targets'),
                              tracking=args_key_chk(kwargs, 'tracking'))
 
-    def pre_build(self, input_data):
+    def pre_build(self, input_data, targets_data, tracking_data):
 
         self.build_model()
 
@@ -285,14 +298,24 @@ class Models(tf_Model):
         if self.rd_softmax_on:
             z_outputs = tf.nn.softmax(z_outputs)
 
-        # --- logs --- #
-        if self.gauge.is_model_built and self.rd_logs_on and not self.gauge.run_model.live.is_val:
+        # --- log run data --- #
+        if self.gauge.is_model_built and self.log_run_data and not self.gauge.run_model.live.is_val:
 
-            if len(self.rd_logs) <= epoch_idx:
-                self.rd_logs.append([])
+            if len(self.run_data_logs['main']) <= epoch_idx:
+                self.run_data_logs['main'].append([])
 
             _log = {'layers': log_data, 'z_outputs': z_outputs}
 
-            self.rd_logs[epoch_idx].insert(batch_idx, _log)
+            self.run_data_logs['main'][epoch_idx].insert(batch_idx, _log)
+
+        # --- log val run data --- #
+        if self.gauge.is_model_built and self.log_run_data_val and self.gauge.run_model.live.is_val:
+
+            if len(self.run_data_logs['val']) <= epoch_idx:
+                self.run_data_logs['val'].append([])
+
+            _log = {'layers': log_data, 'z_outputs': z_outputs}
+
+            self.run_data_logs['val'][epoch_idx].insert(batch_idx, _log)
 
         return z_outputs
