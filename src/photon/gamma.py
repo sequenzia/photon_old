@@ -3,6 +3,8 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
+from photon.utils import list_idx_append
+
 from concurrent import futures
 from dataclasses import replace as dc_replace
 
@@ -214,6 +216,7 @@ class Gamma():
 
             chain = self.update_live_chain(chain)
             model = self.update_live_model(model, chain=chain)
+            log_type = 'main'
 
         # -- flip -- #
         if is_val:
@@ -224,12 +227,19 @@ class Gamma():
                                            is_val=True)
 
             model = self.update_live_model(model, chain)
+            log_type = 'val'
 
         # -- loop batch data -- #
         for batch_idx, batch_data in self.get_data(chain, is_val):
 
             chain.live.batch_idx = batch_idx
             model.live.batch_idx = batch_idx
+
+            # --- log batch data -- #
+            if chain.src.data_config['log_config']['log_batch_data'][log_type] and chain.chain_idx == 0:
+
+                list_idx_append(chain.src.logs.batch_data[log_type], chain.live.epoch_idx)
+                chain.src.logs.batch_data[log_type][chain.live.epoch_idx].append(batch_data)
 
             self.run_steps(model, batch_data, batch_idx, device_idx)
 
@@ -242,6 +252,7 @@ class Gamma():
                                            is_val=False)
 
             model = self.update_live_model(model, chain)
+            log_type = 'main'
 
         return
 

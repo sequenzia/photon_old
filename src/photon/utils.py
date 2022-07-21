@@ -73,6 +73,12 @@ def args_key_chk(args, key, default=None):
     else:
         return default
 
+def list_idx_append(obj, idx_pos):
+    if len(obj) <= idx_pos:
+            return obj.append([])
+    else:
+        return obj
+
 def config_block_mask(off_blocks=None):
 
     ''' mask on means block should be utilized, mask off means it will be skipped '''

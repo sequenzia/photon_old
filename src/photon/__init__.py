@@ -268,6 +268,8 @@ class Networks():
         if data_cols['t_cols'] is None:
             self.data.t_cols = []
 
+        self.data.f_cols = data_cols['f_cols']
+
         self.data.n_x_cols = len(self.data.x_cols)
         self.data.n_c_cols = len(self.data.c_cols)
         self.data.n_y_cols = len(self.data.y_cols)
@@ -342,6 +344,19 @@ class Networks():
                                 'BAR_TP']
 
         self.data.all_cols = self.data.x_cols + self.data.c_cols + self.data.y_cols + self.data.t_cols
+
+
+        x_ed = self.data.n_x_cols
+        c_st = x_ed
+        c_ed = c_st + self.data.n_c_cols
+        y_st= c_ed
+        y_ed = y_st + self.data.n_y_cols
+        t_st = y_ed
+
+        self.data.slice_configs = {'x_slice': np.s_[..., :x_ed],
+                                   'c_slice': np.s_[..., c_st:c_ed],
+                                   'y_slice': np.s_[..., y_st:y_ed],
+                                   't_slice': np.s_[..., t_st:]}
 
     def setup_x_groups(self, x_cols):
 
@@ -491,8 +506,6 @@ class Trees():
 
         self.data.batch_size = batch_size
 
-        self.data.feature_cols = ['x_cols', 'c_cols']
-
         if samples_pd is None:
 
             self.data.samples_pd = int(23400 / self.data.res)
@@ -606,10 +619,10 @@ class Trees():
         if self.data.seq_agg > 0:
             self.data.seq_depth = int(self.data.seq_len / self.data.seq_agg)
 
-        if 'c_cols' in self.data.feature_cols:
+        if 'c_cols' in self.data.f_cols:
             self.data.input_shape = (self.data.seq_depth, self.data.n_x_cols + self.data.n_c_cols)
 
-        if 'c_cols' not in self.data.feature_cols:
+        if 'c_cols' not in self.data.f_cols:
             self.data.input_shape = (self.data.seq_depth, self.data.n_x_cols)
 
         self.data.targets_shape = (self.data.seq_depth, self.data.n_y_cols)
@@ -751,6 +764,7 @@ class Trees():
 
             # -- x groups on -- #
             if self.network.x_groups_on:
+
                 # -- pr cols -- #
                 pr_cols = self.data.x_groups['pr_group']
 
@@ -806,12 +820,12 @@ class Trees():
 
         # -- splts -- #
 
-        self.data.store[data_type]['x_bars'] = self.data.store[data_type]['model_bars'][..., :32]
-        self.data.store[data_type]['c_bars'] = self.data.store[data_type]['model_bars'][..., 32:39]
-        self.data.store[data_type]['y_bars'] = self.data.store[data_type]['model_bars'][..., 39:51]
-        self.data.store[data_type]['t_bars'] = self.data.store[data_type]['model_bars'][..., 51:]
+        self.data.store[data_type]['x_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['x_slice']]
+        self.data.store[data_type]['c_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['c_slice']]
+        self.data.store[data_type]['y_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['y_slice']]
+        self.data.store[data_type]['t_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['t_slice']]
 
-        if 'c_cols' in self.data.feature_cols:
+        if 'c_cols' in self.data.f_cols:
             self.data.store[data_type]['x_bars'] = \
                 np.concatenate([self.data.store[data_type]['x_bars'],
                                 self.data.store[data_type]['c_bars']], axis=-1)
@@ -966,6 +980,8 @@ class Chains():
 
         self.model_subs = []
 
+        self.logs = self.Logs()
+
     def build_chain(self):
 
         self.model_config = self.branch.configs.by_chain_idx('model', self.chain_idx)
@@ -1103,6 +1119,11 @@ class Chains():
 
         self.data_config['targets']['true_slice'] = np.s_[...,:split_on]
         self.data_config['targets']['tracking_slice'] = np.s_[..., split_on:]
+
+    @dataclass
+    class Logs:
+
+        batch_data: List = field(default_factory=lambda: {'main':[[]],'val':[[]]})
 
 class Gauge():
 
