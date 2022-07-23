@@ -131,6 +131,11 @@ class Layers(tf_Layer):
             if self.gauge.is_live:
                 training = self.gauge.run_model.live.is_training
 
+        if self.gauge.run_model.live.is_val:
+            is_val = True
+        else:
+            is_val = False
+
         if not self.built:
 
             self.input_shp = get_shapes(inputs)
@@ -142,7 +147,7 @@ class Layers(tf_Layer):
         # -- call layer -- #
         z_output = self.call(inputs, training=training)
 
-        if self.gauge.is_model_built and self.gauge.src.log_layers and not self.no_log:
+        if self.gauge.is_model_built and self.gauge.src.log_layers and not is_val and not self.no_log:
 
             if self.gauge.src.log_layers in ['summary','min','shapes']:
                 log_level = 'summary'
@@ -151,7 +156,7 @@ class Layers(tf_Layer):
 
             self.log_call(self.layer_nm, inputs, z_output, 'main', log_level)
 
-        if self.gauge.is_model_built and self.gauge.src.log_layers_val and not self.no_log:
+        if self.gauge.is_model_built and self.gauge.src.log_layers_val and is_val and not self.no_log:
 
             if self.gauge.src.log_layers_val in ['summary','min','shapes']:
                 log_level_val = 'summary'
@@ -183,8 +188,8 @@ class Layers(tf_Layer):
     def log_call(self, layer_nm, inputs, z_output, log_type, log_level):
 
         chain_idx = self.gauge.chain_idx
-        epoch_idx =  self.gauge.run_model.live.epoch_idx
-        batch_idx =  self.gauge.run_model.live.batch_idx
+        epoch_idx = self.gauge.run_model.live.epoch_idx
+        batch_idx = self.gauge.run_model.live.batch_idx
 
         log_in = inputs
         log_out = z_output
@@ -212,7 +217,7 @@ class Layers(tf_Layer):
             for _out_log in log_out:
                 log_out_sh.append(_out_log.shape.as_list())
         else:
-            log_out_sh = log_out.shape.as_list()
+            log_out_sh = list(log_out.shape)
 
             if log_level == 'full':
 
@@ -252,8 +257,8 @@ class Layers(tf_Layer):
 
     def save_layer_log(self, _log):
 
-        epoch_idx = self.gauge.cur_run.epoch_idx.numpy()
-        batch_idx = self.gauge.cur_run.batch_idx.numpy()
+        epoch_idx = self.gauge.run_model.live.epoch_idx
+        batch_idx = self.gauge.run_model.live.batch_idx
 
         if len(self.logs) <= epoch_idx:
             self.logs.insert(epoch_idx, [])
@@ -812,6 +817,220 @@ class Pool(Layers):
     def call(self, inputs, training=None, **kwargs):
 
         z_output = self.k_layer(inputs=inputs, training=training)
+
+        return z_output
+
+class Res(Layers):
+
+    def __init__(self, gauge, layer_nm, res_config, **kwargs):
+
+        super().__init__(gauge, layer_nm, no_subs=True, no_log=False, **kwargs)
+
+        self.dnn_args = res_config['dnn_args']
+
+        self.units = self.dnn_args['units']
+
+        self.cols_match = res_config['cols_match']
+        self.depth_match = res_config['depth_match']
+
+        self.w_on = res_config['w_on']
+
+        self.act_fn = res_config['act_fn']
+        self.init_fn = res_config['init_fn']
+        self.w_reg = res_config['w_reg']
+
+        self.pool_on = res_config['pool_on']
+        self.pool_type = res_config['pool_type']
+
+        self.res_drop = res_config['res_drop']
+        self.res_norm = res_config['res_norm']
+
+        self.act_fn1 = self.act_fn
+        self.act_fn2 = self.act_fn
+
+        self._layer = None
+
+        self.logs = [[]]
+
+    def build(self, input_shp, **kwargs):
+
+        self.in1_shp = input_shp[0]
+        self.in2_shp = input_shp[1]
+
+        self.n_cols_1 = self.in1_shp[-1]
+        self.n_cols_2 = self.in2_shp[-1]
+
+        self.depth_1 = self.in1_shp[1]
+        self.depth_2 = self.in2_shp[1]
+
+        self.w1_shp = (self.n_cols_2, self.n_cols_2)
+        self.b1_shp = (self.n_cols_2, )
+
+        self.w2_shp = (self.n_cols_1, self.units)
+        self.b2_shp = (self.units, )
+
+        self.cols_diff = self.n_cols_1 - self.n_cols_2
+
+        dnn_args = self.dnn_args.copy()
+
+        if self.cols_match:
+
+            if self.cols_diff == 0:
+                self.dnn_type = 0
+                self.dnn_units = 0
+
+            if self.cols_diff > 0:
+                self.dnn_type = 1
+                dnn_args['units'] = self.n_cols_1
+                self.g_layers.append(DNN(self.gauge, layer_nm=self.layer_nm + '_dnn', layer_args=dnn_args, is_child=True))
+
+            if self.cols_diff < 0:
+                self.dnn_type = 2
+                dnn_args['units'] = self.n_cols_2
+                self.g_layers.append(DNN(self.gauge, layer_nm=self.layer_nm + '_dnn', layer_args=dnn_args, is_child=True))
+
+        if self.pool_on:
+
+            self.in2_shp = (self.in2_shp[0], self.n_cols_2)
+
+            self.w1_shp = (self.in2_shp[1], self.n_cols_2)
+            self.b1_shp = (self.n_cols_2, )
+
+            self.w2_shp = (self.n_cols_2, self.n_cols_2)
+            self.b2_shp = (self.n_cols_2, )
+
+            self.pool_nm = self.layer_nm + '_pool'
+
+            self.pool = self.add_sub_layer(layer_cls=Pool,
+                                           layer_nm=self.pool_nm,
+                                           pool_type=self.pool_type,
+                                           is_global=True,
+                                           input_shp=self.in1_shp)
+
+        if self.w_on:
+
+            self.w1 = self.add_weight(name=self.layer_nm + '/w1',
+                                      shape=self.w1_shp,
+                                      initializer=self.init_fn,
+                                      regularizer=self.w_reg,
+                                      trainable=True)
+
+            self.b1 = self.add_weight(name=self.layer_nm + '/b1',
+                                      shape=self.b1_shp,
+                                      initializer=self.init_fn,
+                                      regularizer=self.w_reg,
+                                      trainable=True)
+
+            self.w2 = self.add_weight(name=self.layer_nm + '/w2',
+                                      shape=self.w2_shp,
+                                      initializer=self.init_fn,
+                                      regularizer=self.w_reg,
+                                      trainable=True)
+
+            self.b2 = self.add_weight(name=self.layer_nm + '/b2',
+                                      shape=self.b2_shp,
+                                      initializer=self.init_fn,
+                                      regularizer=self.w_reg,
+                                      trainable=True)
+
+        if self.res_drop:
+
+            self.drop_nm_1 = self.layer_nm + '_drop_1'
+            self.drop_nm_2 = self.layer_nm + '_drop_2'
+
+            self.drop_1 = Reg(self.gauge, self.drop_nm_1, self.res_drop)
+            self.drop_2 = Reg(self.gauge, self.drop_nm_2, self.res_drop)
+
+        if self.res_norm:
+
+            self.norm_nm_1 = self.layer_nm + '_norm_1'
+            self.norm_nm_2 = self.layer_nm + '_norm_2'
+
+            self.norm_1 = Norm(self.gauge, self.norm_nm_1, self.res_norm)
+            self.norm_2 = Norm(self.gauge, self.norm_nm_2, self.res_norm)
+
+    def call(self, inputs, training, **kwargs):
+
+        epoch_idx = np_exp(self.gauge.run_model.live.epoch_idx)
+
+        x_inputs_0 = inputs[0]  # main
+        x_inputs_1 = inputs[1]  # res
+
+        z_inputs_0 = inputs[0]
+        z_inputs_1 = inputs[1]
+
+        # -- depth match -- #
+        if self.depth_match:
+
+            depth_diff = x_inputs_0.shape[1] - x_inputs_1.shape[1]
+
+            if depth_diff > 0:
+                x_inputs_0 = tf.repeat(x_inputs_0, depth_diff, axis=1)
+
+            if depth_diff < 0:
+                x_inputs_1 = tf.repeat(x_inputs_1, depth_diff, axis=1)
+
+        # -- cols match -- #
+        if self.cols_match:
+
+            if self.dnn_type == 1:
+                z_inputs_1 = self.g_layers[0](inputs=x_inputs_1, training=training)
+
+            if self.dnn_type == 2:
+                z_inputs_0 = self.g_layers[0](inputs=x_inputs_0, training=training)
+
+            if self.logs_on:
+
+                if len(self.logs) <= epoch_idx:
+                    self.logs.append([])
+
+                _logs = {
+                    'x_inputs_0': x_inputs_0.numpy(),
+                    'x_inputs_1': x_inputs_1.numpy(),
+                    'z_inputs_0': z_inputs_0.numpy(),
+                    'z_inputs_1': z_inputs_1.numpy()
+                }
+
+                self.logs[epoch_idx].append(_logs)
+
+        # -- res weights -- #
+        if self.w_on:
+            z_inputs_1 = tf.matmul(z_inputs_1, self.w1) + self.b1
+
+        # -- res drop -- #
+        if self.res_drop:
+            z_inputs_1 = self.drop_1(inputs=z_inputs_1, training=training)
+
+        # -- res norm -- #
+        if self.res_norm:
+            z_inputs_1 = self.norm_1(inputs=z_inputs_1, training=training)
+
+        # -- res act -- #
+        if self.act_fn is not None:
+            z_inputs_1 = self.act_fn1(z_inputs_1)
+
+        # -- res pool -- #
+        if self.pool_on:
+            z_inputs_1 = self.pool(inputs=z_inputs_1, training=training)
+
+        # -- output -- #
+        z_output = tf.add(z_inputs_0, z_inputs_1)
+
+        # -- output weights -- #
+        if self.w_on:
+            z_output = tf.matmul(z_output, self.w2) + self.b2
+
+        # -- output drop -- #
+        if self.res_drop:
+            z_output = self.drop_2(inputs=z_output, training=training)
+
+        # -- output norm -- #
+        if self.res_norm:
+            z_output = self.norm_2(inputs=z_output, training=training)
+
+        # -- output act -- #
+        if self.act_fn is not None:
+            z_output = self.act_fn2(z_output)
 
         return z_output
 
