@@ -125,13 +125,15 @@ class Gamma():
             inputs = data[0]
             targets = data[1]
             tracking = data[2]
+            outputs = data[3]
 
             if not chain.src.data_config['targets']['is_seq']:
                 targets = data[1][:, -1, :]
 
             batch_data = {'inputs': inputs,
                           'targets': targets,
-                          'tracking': tracking}
+                          'tracking': tracking,
+                          'outputs': outputs}
 
             yield batch_idx, batch_data
 

@@ -458,6 +458,7 @@ class Trees():
                  masking,
                  shuffle,
                  preproc,
+                 outputs_on,
                  seed,
                  name=None,
                  samples_pd=None,
@@ -502,6 +503,7 @@ class Trees():
 
         self.data.shuffle = shuffle
         self.data.preproc = preproc
+        self.data.outputs_on = outputs_on
         self.data.seed = seed
 
         self.data.batch_size = batch_size
@@ -708,7 +710,7 @@ class Trees():
         # -- normalise full bars -- #
         full_bars = self.normalize_bars(full_bars)
 
-        # === append seq bars to close bars to generate model bars === #
+        # --- append seq bars to close bars to generate model bars --- #
         for _idx in range(n_bars):
 
             _bar = close_bars.iloc[_idx]
@@ -810,6 +812,13 @@ class Trees():
 
         return data_bars
 
+    def setup_outputs_ds(self, data_type):
+
+        x_bars = self.data.store[data_type]['model_bars'][self.data.slice_configs['x_slice']]
+
+        return tf.data.Dataset.from_tensor_slices(tf.convert_to_tensor(x_bars,
+                                                                       dtype=self.data.dtype))
+
     def pre_build_datasets(self, data_type):
 
         batch_size = self.data.store[data_type]['config']['batch_size']
@@ -838,8 +847,11 @@ class Trees():
 
         t_ds = tf.data.Dataset.from_tensor_slices(tf.convert_to_tensor(self.data.store[data_type]['t_bars'],
                                                                        dtype=self.data.dtype))
-
-        self.data.store[data_type]['data_ds'] = tf.data.Dataset.zip((x_ds, y_ds, t_ds)).batch(batch_size)
+        if self.data.outputs_on:
+            o_ds = self.setup_outputs_ds(data_type)
+            self.data.store[data_type]['data_ds'] = tf.data.Dataset.zip((x_ds, y_ds, t_ds, o_ds)).batch(batch_size)
+        else:
+            self.data.store[data_type]['data_ds'] = tf.data.Dataset.zip((x_ds, y_ds, t_ds)).batch(batch_size)
 
         # self.data.store[data_type]['data_ds'] = self.data.store[data_type]['data_ds'].prefetch(10)
 
