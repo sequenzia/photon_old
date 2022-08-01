@@ -3,6 +3,7 @@ A end-to-end Machine Learning ramework that extends the functionality of other f
 
 **Key Features of Photon ML:**
 
+- Streamlines the development and implementation of end-to-end Machine Learning systems.
 - Custom object-oriented API with built-in subclassing of Keras and TensorFlow APIs.
 - Built-in custom modules such as Models, Layers, Optimizers and Loss Functions.
 - Highly customizable interface to extend built-in modules for specific algorithms/networks.
