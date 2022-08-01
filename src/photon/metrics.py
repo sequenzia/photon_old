@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
 
-# ::: Metrics Class ::: #
 class Metrics():
 
     def __init__(self):

@@ -4,7 +4,6 @@ import numpy as np
 from tensorflow.python.keras.utils import losses_utils
 from tensorflow import math as tfm
 
-# ::: Losses Class ::: #
 class Losses():
 
     def __init__(self):
