@@ -36,11 +36,11 @@ class Photon():
         self.mod_dir = pathlib.Path(__file__).parent.parent
 
         if not self.run_local:
-            from photon import metrics, losses
+            from photon import metrics, losses, utils
             from photon.gamma import Gamma
         else:
             sys.path.append(self.mod_dir)
-            from photon import metrics, losses
+            from photon import metrics, losses, utils
             from photon.gamma import Gamma
 
         self.Networks = Networks
@@ -51,6 +51,7 @@ class Photon():
 
         self.metrics = metrics.Metrics()
         self.losses = losses.Losses()
+        self.utils = utils
 
         self.n_gpus = 0
         self.n_v_gpus = 0
@@ -1194,6 +1195,7 @@ class Gauge():
                          'val': None,
                          'test': None}
 
+        self.log_theta = False
         self.logs = self.Logs()
 
         self.setup_strats()
@@ -1284,6 +1286,10 @@ class Gauge():
         # -- compile model -- #
         self.src.compile(optimizer=self.opt_fn)
 
+        self.log_theta = self.model_args['log_config']['log_theta']
+
+        self.theta = Theta(self)
+
         self.is_compiled = True
 
     def setup_cp(self, step_idx, load_cp):
@@ -1346,24 +1352,24 @@ class Gauge():
         calls: List = field(default_factory=lambda: {'main':[[]],'val':[[]]})
         layers: List = field(default_factory=lambda: {'main':[[]],'val':[[]]})
         run_data: List = field(default_factory=lambda: {'main':[[]],'val':[[]]})
+        theta: List = field(default_factory=lambda: [[]])
 
 class Theta:
 
-    def __init__(self, run):
+    def __init__(self, gauge):
 
-        self.run = run
+        self.gauge = gauge
+        self.logs_on = self.gauge.log_theta
 
         self.params = {'model_pre': [], 'model_post': [], 'opt': [], 'grads': []}
 
-        self.logs = []
-
     def save_params(self, param_type, grads=None):
 
-        if self.run.cur_chain.logs_on['theta']:
+        if self.logs_on:
 
             if param_type == 'model_pre' or param_type == 'model_post':
 
-                for idx, p in enumerate(self.run.model.trainable_variables):
+                for idx, p in enumerate(self.gauge.src.trainable_variables):
 
                     p_name = p.name
 
@@ -1388,7 +1394,7 @@ class Theta:
 
             if param_type == 'opt':
 
-                for idx, opt in enumerate(self.run.model.optimizer.get_weights()):
+                for idx, opt in enumerate(self.gauge.src.optimizer.get_weights()):
 
                     if idx > 0:
                         opt_data = {'idx': idx,
@@ -1398,15 +1404,13 @@ class Theta:
 
                         self.params['opt'].append(opt_data)
 
-    def log_params(self):
+    def log_params(self, epoch_idx):
 
-        if self.run.cur_chain.logs_on['theta']:
+        if self.logs_on:
 
-            epoch_idx = self.run.epoch_idx
+            if len(self.gauge.logs.theta) <= epoch_idx:
+                self.gauge.logs.theta.append([])
 
-            if len(self.logs) <= epoch_idx:
-                self.logs.append([])
-
-            self.logs[epoch_idx].append(self.params.copy())
+            self.gauge.logs.theta[epoch_idx].append(self.params.copy())
 
             self.params = {'model_pre': [], 'model_post': [], 'opt': [], 'grads': []}

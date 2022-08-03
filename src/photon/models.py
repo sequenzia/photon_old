@@ -41,6 +41,7 @@ class Models(tf_Model):
         log_layers_config = args_key_chk(self.gauge.model_args['log_config'], 'log_layers', [])
         log_run_data_config = args_key_chk(self.gauge.model_args['log_config'], 'log_run_data', [])
 
+
         self.log_calls = args_key_chk(log_calls_config, 'main', False)
         self.log_calls_val = args_key_chk(log_calls_config, 'val', False)
 
@@ -49,6 +50,11 @@ class Models(tf_Model):
 
         self.log_run_data = args_key_chk(log_run_data_config, 'main', False)
         self.log_run_data_val = args_key_chk(log_run_data_config, 'val', False)
+
+        self.log_run_data = args_key_chk(log_run_data_config, 'main', False)
+        self.log_run_data_val = args_key_chk(log_run_data_config, 'val', False)
+
+        # self.log_theta = args_key_chk(self.gauge.model_args['log_config'], 'log_theta', False)
 
         self.model_idx = self.gauge.model_idx
         self.chain = self.gauge.chain

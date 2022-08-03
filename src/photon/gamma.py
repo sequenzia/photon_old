@@ -278,6 +278,9 @@ class Gamma():
                                           targets=batch_data['targets'],
                                           tracking=batch_data['tracking'])
 
+                    # -- save pre model variables to theta -- #
+                    model.gauge.theta.save_params('model_pre')
+
                     step_data = self.run_splits(model, step_data, batch_data)
                     step_data = self.run_loss(model, step_data)
 
@@ -286,6 +289,15 @@ class Gamma():
 
                     # -- apply grads -- #
                     model.src.optimizer.apply_gradients(zip(step_data['step_grads'], model.src.trainable_variables))
+
+                    # -- save optimizer variables to theta -- #
+                    model.gauge.theta.save_params('opt')
+
+                    # -- save post model variables to theta -- #
+                    model.gauge.theta.save_params('model_post', step_data['step_grads'])
+
+                    # -- log theta params -- #
+                    model.gauge.theta.log_params(model.live.epoch_idx)
 
                     # -- save lr -- #
                     step_data['learning_rates'] = model.src.optimizer.lr_sch.cur_lr
