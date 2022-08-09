@@ -178,39 +178,13 @@ class Gamma():
 
                         for model_idx in range(start_idx, end_idx):
 
+                            print('run_async', model_idx)
+
                             model = chain.models[model_idx]
 
                             model_sub = model_exec.submit(self.run_data, chain, model, model_idx, is_val, device_idx)
-                            # model_sub.add_done_callback(self.async_callback_fn)
-
-                            # async_sub = {'async_idx': async_idx,
-                            #              'device_idx': device_idx,
-                            #              'model_idx': model_idx,
-                            #              'model_sub': model_sub}
-                            #
-                            # chain.model_subs[async_idx].insert(model_idx, async_sub)
 
                     futures.wait([async_sub['model_sub'] for async_sub in chain.model_subs[async_idx]])
-
-    def async_callback_fn(self, _future):
-
-        try:
-
-            _future_res = _future.result()
-
-        except AssertionError as err:
-
-            print('Future Generated an Exception: %s' % (err))
-            print('------------------------------- \n')
-
-        # else:
-        #
-        #     print('CALL BACK')
-            # self.save_steps(model_future_res['model'],
-            #                 model_future_res['batch_idx'],
-            #                 model_future_res['step_data'])
-
-        return
 
     def run_data(self, chain, model, model_idx, is_val, device_idx):
 
