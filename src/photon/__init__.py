@@ -1,7 +1,7 @@
 import os, sys, math, pickle, json, shelve, struct, pathlib
 
 from dataclasses import dataclass, field, replace as dc_replace
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from contextlib import redirect_stdout, nullcontext
 
@@ -16,22 +16,14 @@ import tensorflow as tf
 
 from tensorflow.keras import backend as K
 
-from tensorflow import distribute as tf_dist
-
 from sklearn import preprocessing
 
 class Photon():
 
-    def __init__(self,
-                 run_local=False,
-                 run_dir=None,
-                 cuda_on=True,
-                 limit_mem=True):
-
-        self.cuda_on = cuda_on
-        self.limit_mem = limit_mem
+    def __init__(self, run_local: bool = False, mem_limit_on: bool = True, run_dir: Optional[str]=None) -> None:
 
         self.run_local = run_local
+        self.mem_limit_on = mem_limit_on
         self.run_dir = run_dir
         self.mod_dir = pathlib.Path(__file__).parent.parent
 
@@ -53,19 +45,14 @@ class Photon():
         self.losses = losses.Losses()
         self.utils = utils
 
-        self.n_gpus = 0
-        self.n_v_gpus = 0
+        self.physical_cpus = tf.config.list_physical_devices('CPU')
+        self.physical_gpus = tf.config.list_physical_devices('GPU')
 
-        if self.cuda_on:
+        self.n_gpus = len(self.physical_gpus)
 
-            self.physical_cpus = tf.config.list_physical_devices('CPU')
-            self.physical_gpus = tf.config.list_physical_devices('GPU')
-
-            self.n_gpus = len(self.physical_gpus)
-
-            if self.limit_mem:
-                for d in self.physical_gpus:
-                    tf.config.experimental.set_memory_growth(d, True)
+        if self.mem_limit_on:
+            for d in self.physical_gpus:
+                tf.config.experimental.set_memory_growth(d, True)
 
         self.set_options(2)
 
@@ -1009,9 +996,6 @@ class Chains():
         self.n_models = self.model_config['n_models']
         self.n_outputs = self.model_config['n_models']
 
-        # -- setup GPUS -- #
-        self.map_gpus()
-
         # -- setup data slices -- #
         self.setup_slices()
 
@@ -1072,56 +1056,6 @@ class Chains():
             self.models.insert(model_idx, gauge)
 
         self.is_built = True
-
-        return
-
-    def map_gpus(self):
-
-        if self.photon.n_v_gpus == 0 and self.photon.n_gpus > 1:
-
-            grp_idx = 0
-
-            for model_idx in range(self.n_models):
-
-                dis = model_idx % self.photon.n_gpus
-                grp_dis = grp_idx % 2
-
-                gpu_idx = 0
-
-                if grp_dis == 0:
-                    gpu_idx = dis
-
-
-                # print(f'{dis} {grp_dis} {grp_idx} {gpu_idx}')
-
-                gpu_data = {'gpu_idx': gpu_idx,
-                            'model_idx': model_idx,
-                            'v_run_device': '/device:GPU:' + str(gpu_idx)}
-
-                self.model_gpus.insert(model_idx, gpu_data)
-
-                grp_idx += 3
-
-        if self.photon.n_v_gpus > 0:
-
-            grp_idx = 0
-            grp_mod = 0
-
-            for model_idx in range(self.n_models):
-
-                if model_idx >= self.photon.n_v_gpus:
-
-                    grp_idx += 1
-
-                    grp_mod = math.ceil(grp_idx/self.photon.n_v_gpus)
-
-                gpu_idx = model_idx - (self.photon.n_v_gpus * grp_mod)
-
-                gpu_data = {'gpu_idx': gpu_idx,
-                            'model_idx': model_idx,
-                            'v_run_device': self.photon.v_gpus[gpu_idx]['v_run_device']}
-
-                self.model_gpus.insert(model_idx, gpu_data)
 
         return
 
@@ -1208,7 +1142,7 @@ class Gauge():
         # self.run_device = '/GPU:0'
         self.strat = None
 
-        if self.chain.photon.n_gpus > 1 or self.chain.photon.n_v_gpus > 0:
+        if self.chain.photon.n_gpus > 1:
 
             # if self.strat_type is None:
             # self.run_device = self.chain.model_gpus[self.model_idx]['v_run_device']
