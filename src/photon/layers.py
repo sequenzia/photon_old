@@ -430,52 +430,55 @@ class CNN(Layers):
         bias_constraint = None
         data_format = 'channels_last'
 
-        # -- args -- #
+        # -- set args as class variables -- #
 
-        if 'filters' in kwargs:
-            filters = kwargs['filters']
+        for k, v in kwargs.items():
+            setattr(self, k, v )
 
-        if 'kernel_size' in kwargs:
-            kernel_size = kwargs['kernel_size']
-
-        if 'strides' in kwargs:
-            strides = kwargs['strides']
-
-        if 'padding' in kwargs:
-            padding = kwargs['padding']
-
-        if 'dilation_rate' in kwargs:
-            dilation_rate = kwargs['dilation_rate']
-
-        if 'activation' in kwargs:
-            activation = kwargs['activation']
-
-        if 'use_bias' in kwargs:
-            use_bias = kwargs['use_bias']
-
-        if 'kernel_initializer' in kwargs:
-            kernel_initializer = kwargs['kernel_initializer']
-
-        if 'bias_initializer' in kwargs:
-            bias_initializer = kwargs['bias_initializer']
-
-        if 'kernel_regularizer' in kwargs:
-            kernel_regularizer = kwargs['kernel_regularizer']
-
-        if 'bias_regularizer' in kwargs:
-            bias_regularizer = kwargs['bias_regularizer']
-
-        if 'activity_regularizer' in kwargs:
-            activity_regularizer = kwargs['activity_regularizer']
-
-        if 'kernel_constraint' in kwargs:
-            kernel_constraint = kwargs['kernel_constraint']
-
-        if 'bias_constraint' in kwargs:
-            bias_constraint = kwargs['bias_constraint']
-
-        if 'data_format' in kwargs:
-            data_format = kwargs['data_format']
+        # if 'filters' in kwargs:
+        #     filters = kwargs['filters']
+        #
+        # if 'kernel_size' in kwargs:
+        #     kernel_size = kwargs['kernel_size']
+        #
+        # if 'strides' in kwargs:
+        #     strides = kwargs['strides']
+        #
+        # if 'padding' in kwargs:
+        #     padding = kwargs['padding']
+        #
+        # if 'dilation_rate' in kwargs:
+        #     dilation_rate = kwargs['dilation_rate']
+        #
+        # if 'activation' in kwargs:
+        #     activation = kwargs['activation']
+        #
+        # if 'use_bias' in kwargs:
+        #     use_bias = kwargs['use_bias']
+        #
+        # if 'kernel_initializer' in kwargs:
+        #     kernel_initializer = kwargs['kernel_initializer']
+        #
+        # if 'bias_initializer' in kwargs:
+        #     bias_initializer = kwargs['bias_initializer']
+        #
+        # if 'kernel_regularizer' in kwargs:
+        #     kernel_regularizer = kwargs['kernel_regularizer']
+        #
+        # if 'bias_regularizer' in kwargs:
+        #     bias_regularizer = kwargs['bias_regularizer']
+        #
+        # if 'activity_regularizer' in kwargs:
+        #     activity_regularizer = kwargs['activity_regularizer']
+        #
+        # if 'kernel_constraint' in kwargs:
+        #     kernel_constraint = kwargs['kernel_constraint']
+        #
+        # if 'bias_constraint' in kwargs:
+        #     bias_constraint = kwargs['bias_constraint']
+        #
+        # if 'data_format' in kwargs:
+        #     data_format = kwargs['data_format']
 
         _args = {
             'filters': filters,
@@ -560,6 +563,7 @@ class RNN(Layers):
             state_1_post = np_exp(self.k_layer.states[1])
 
         # -- logging -- #
+
         if self.logs_on:
 
             _log = {'inputs': np_exp(inputs),
@@ -571,7 +575,6 @@ class RNN(Layers):
                 'z_state_1': np_exp(z_state[1]),
                 'z_outputs': np_exp(z_outputs)}
 
-            # self.logs.append(_log)
             self.save_layer_log(_log)
 
         return z_outputs
@@ -634,6 +637,7 @@ class RNN(Layers):
     def set_args(self, **kwargs):
 
         # -- default cell args -- #
+
         self.units = 1
         self.activation = 'tanh'
         self.recurrent_activation = 'sigmoid'
@@ -654,12 +658,15 @@ class RNN(Layers):
         self.unit_forget_bias = True
 
         # -- default rnn args -- #
+
         self.return_sequences = False
         self.return_state = False
         self.go_backwards = False
         self.stateful = False
         self.unroll = False
         self.time_major = False
+
+        # -- set args as class variables -- #
 
         for k, v in kwargs.items():
             setattr(self, k, v )
