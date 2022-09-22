@@ -20,6 +20,31 @@ from tensorflow.python.keras.utils import losses_utils
 
 from sklearn import preprocessing
 
+def posterior_mean_field(kernel_size, bias_size=0, dtype=None):
+
+    n = kernel_size + bias_size
+    c = np.log(np.expm1(1.))
+
+    model = tf.keras.Sequential(name='photon_posterior')
+    model.add(tfpl.VariableLayer(2 * n, dtype=dtype))
+    model.add(tfpl.DistributionLambda(
+        lambda t: tfd.Independent(tfd.Normal(loc=t[..., :n],
+                                             scale=1e-5 + tf.nn.softplus(c + t[..., n:])),
+                                  reinterpreted_batch_ndims=1)))
+
+    return model
+
+def prior_trainable(kernel_size, bias_size=0, dtype=None):
+
+    n = kernel_size + bias_size
+
+    model = tf.keras.Sequential(name='photon_prior')
+    model.add(tfpl.VariableLayer(n, dtype=dtype))
+    model.add(tfpl.DistributionLambda(lambda t: tfd.Independent(tfd.Normal(loc=t, scale=1),
+                                                                reinterpreted_batch_ndims=1)))
+    return model
+
+
 class Models(tf_Model):
 
     def __init__(self, **kwargs):

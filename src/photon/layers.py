@@ -661,78 +661,8 @@ class RNN(Layers):
         self.unroll = False
         self.time_major = False
 
-        # -- cell args -- #
-
-        if 'units' in kwargs:
-            self.units = kwargs['units']
-
-        if 'activation' in kwargs:
-            self.activation = kwargs['activation']
-
-        if 'recurrent_activation' in kwargs:
-            self.recurrent_activation = kwargs['recurrent_activation']
-
-        if 'use_bias' in kwargs:
-            self.use_bias = kwargs['use_bias']
-
-        if 'kernel_initializer' in kwargs:
-            self.kernel_initializer = kwargs['kernel_initializer']
-
-        if 'recurrent_initializer' in kwargs:
-            self.recurrent_initializer = kwargs['recurrent_initializer']
-
-        if 'bias_initializer' in kwargs:
-            self.bias_initializer = kwargs['bias_initializer']
-
-        if 'kernel_regularizer' in kwargs:
-            self.kernel_regularizer = kwargs['kernel_regularizer']
-
-        if 'recurrent_regularizer' in kwargs:
-            self.recurrent_regularizer = kwargs['recurrent_regularizer']
-
-        if 'bias_regularizer' in kwargs:
-            self.bias_regularizer = kwargs['bias_regularizer']
-
-        if 'kernel_constraint' in kwargs:
-            self.kernel_constraint = kwargs['kernel_constraint']
-
-        if 'recurrent_constraint' in kwargs:
-            self.recurrent_constraint = kwargs['recurrent_constraint']
-
-        if 'bias_constraint' in kwargs:
-            self.bias_constraint = kwargs['bias_constraint']
-
-        if 'dropout' in kwargs:
-            self.dropout = kwargs['dropout']
-
-        if 'recurrent_dropout' in kwargs:
-            self.recurrent_dropout = kwargs['recurrent_dropout']
-
-        if 'reset_after' in kwargs:
-            self.reset_after = kwargs['reset_after']
-
-        if 'unit_forget_bias' in kwargs:
-            self.unit_forget_bias = kwargs['unit_forget_bias']
-
-        # -- rnn args -- #
-
-        if 'return_sequences' in kwargs:
-            self.return_sequences = kwargs['return_sequences']
-
-        if 'return_state' in kwargs:
-            self.return_state = kwargs['return_state']
-
-        if 'go_backwards' in kwargs:
-            self.go_backwards = kwargs['go_backwards']
-
-        if 'stateful' in kwargs:
-            self.stateful = kwargs['stateful']
-
-        if 'unroll' in kwargs:
-            self.unroll = kwargs['unroll']
-
-        if 'time_major' in kwargs:
-            self.time_major = kwargs['time_major']
+        for k, v in kwargs.items():
+            setattr(self, k, v )
 
     def reset_chk(self):
 
