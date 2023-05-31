@@ -123,7 +123,7 @@ class PhotonSch(tf.keras.optimizers.schedules.LearningRateSchedule):
         self.cur_step.assign_add(1)
         self.steps_left.assign_sub(1)
 
-        _reduc = tf.maximum(self.decay_ps * (step - self.config['static_st'] + 1) * self.config['decay_rate'],0)
+        _reduc = tf.maximum(self.decay_ps * (float(step) - self.config['static_st'] + 1) * self.config['decay_rate'],0)
 
         self.cur_lr.assign(tf.maximum((self.config['lr_st'] - _reduc), self.config['lr_min']))
 
