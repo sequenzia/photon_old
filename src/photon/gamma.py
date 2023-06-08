@@ -316,18 +316,22 @@ class Gamma():
 
         targets_config = model.chain.src.data_config['targets']
 
-        step_data['y_true'] = batch_data['targets'][targets_config['true_slice']]
-        step_data['y_tracking'] = batch_data['targets'][targets_config['tracking_slice']]
+        if step_data['y_true'] is None:
+            step_data['y_true'] = batch_data['targets'][targets_config['true_slice']]
+
+        if step_data['y_tracking'] is None:
+            step_data['y_tracking'] = batch_data['targets'][targets_config['tracking_slice']]
 
         return step_data
 
     def run_loss(self, model, step_data):
 
-        batch_size = model.chain.branch.src.trees[model.chain.live.tree_idx].data.batch_size
-
         # -- step loss -- #
         step_data['step_loss'] = model.gauge.loss_fn(step_data['y_true'], step_data['y_hat'])
-        step_data['step_loss'] = tf.nn.compute_average_loss(step_data['step_loss'], global_batch_size=batch_size)
+
+        if tf.rank(step_data['step_loss']) > 0:
+            step_data['step_loss'] = tf.nn.compute_average_loss(step_data['step_loss'],
+                                                                global_batch_size=model.chain.branch.src.trees[model.chain.live.tree_idx].data.batch_size)
 
         # -- model loss -- #
         step_data['model_loss'] = sum(model.src.losses)
@@ -691,10 +695,10 @@ class Gamma():
         if chain.live.run_type != 'fit':
             body_msg += f"\n\t\t"
 
-        body_msg += f" Loss \t {np.mean(main_loss):.3f}"
+        body_msg += f" Loss \t {np.mean(main_loss):.7f}"
 
         if chain.n_models > 1:
-            body_msg += f" ({np.std(main_loss):.3f})"
+            body_msg += f" ({np.std(main_loss):.7f})"
 
         if chain.config.metrics_on:
 
@@ -709,9 +713,9 @@ class Gamma():
                 if idx > 0:
                     body_msg += f"\n\t\t\t\t"
 
-                body_msg += f" {np.mean(main_acc):.3f}"
+                body_msg += f" {np.mean(main_acc):.7f}"
                 if chain.n_models > 1:
-                    body_msg += f" ({np.std(main_acc):.3f})"
+                    body_msg += f" ({np.std(main_acc):.7f})"
 
         # --- val --- #
 

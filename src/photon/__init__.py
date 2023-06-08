@@ -2,6 +2,7 @@ import os, sys, math, pickle, json, shelve, struct, pathlib
 
 from dataclasses import dataclass, field, replace as dc_replace
 from typing import List, Dict, Any, Optional
+from photon.utils import args_key_chk
 
 from contextlib import redirect_stdout, nullcontext
 
@@ -216,9 +217,7 @@ class Networks():
 
         self.setup_cols(self.data_cols)
 
-        data_tab = pq.read_table(self.data_fp)
-
-        self.data.full_bars = data_tab.to_pandas().astype(self.dtype)
+        self.data.full_bars = pq.read_table(self.data_fp).to_pandas().astype(self.dtype)
 
         all_cols = self.data.all_cols + ['is_close']
 
@@ -332,7 +331,6 @@ class Networks():
                                 'BAR_TP']
 
         self.data.all_cols = self.data.x_cols + self.data.c_cols + self.data.y_cols + self.data.t_cols
-
 
         x_ed = self.data.n_x_cols
         c_st = x_ed
@@ -448,6 +446,7 @@ class Trees():
                  preproc,
                  outputs_on,
                  seed,
+                 save_raw=True,
                  name=None,
                  samples_pd=None,
                  photon=None,
@@ -493,11 +492,11 @@ class Trees():
         self.data.preproc = preproc
         self.data.outputs_on = outputs_on
         self.data.seed = seed
+        self.data.save_raw = save_raw
 
         self.data.batch_size = batch_size
 
         if samples_pd is None:
-
             self.data.samples_pd = int(23400 / self.data.res)
         else:
             self.data.samples_pd = samples_pd
@@ -519,67 +518,7 @@ class Trees():
             'val': {'y_cols': None,
                     't_cols': None}}
 
-        self.data.store = {
-            'train': {
-                'close_bars': None,
-                'model_bars': None,
-                'x_bars': None,
-                'y_bars': None,
-                'c_bars': None,
-                't_bars': None,
-                'data_ds': None,
-                'batch_data': None,
-                'input_shp': None,
-                'n_batches': None,
-                'distributed_datasets': [],
-                'config': {
-                    'batch_size': self.data.batch_size,
-                    'n_days': self.data.train_days,
-                    'n_batches': 0,
-                    'n_steps': 0,
-                    'n_samples': 0,
-                    'n_calls': 0,
-                    'masks': {'blocks': {'all_cols': [],
-                                         'x_cols': [],
-                                         'y_cols': [],
-                                         't_cols': []}}}},
-            'test': {
-                'close_bars': None,
-                'model_bars': None,
-                'data_ds': None,
-                'batch_data': None,
-                'input_shp': None,
-                'n_batches': None,
-                'config': {
-                    'batch_size': self.data.batch_size,
-                    'n_days': self.data.test_days,
-                    'n_batches': 0,
-                    'n_steps': 0,
-                    'n_samples': 0,
-                    'n_calls': 0,
-                    'masks': {'blocks': {'all_cols': [],
-                                         'x_cols': [],
-                                         'y_cols': [],
-                                         't_cols': []}}}},
-            'val': {
-                'data_bars': None,
-                'close_bars': None,
-                'model_bars': None,
-                'data_ds': None,
-                'batch_data': None,
-                'input_shp': None,
-                'n_batches': None,
-                'config': {
-                    'batch_size': self.data.batch_size,
-                    'n_days': self.data.val_days,
-                    'n_batches': 0,
-                    'n_steps': 0,
-                    'n_samples': 0,
-                    'n_calls': 0,
-                    'masks': {'blocks': {'all_cols': [],
-                                         'x_cols': [],
-                                         'y_cols': [],
-                                         't_cols': []}}}}}
+        self.data.store = self.create_store()
 
         # -- setup data -- #
         self.setup_data()
@@ -598,9 +537,86 @@ class Trees():
         # -- loop types -- #
         for data_type in self.types_on:
             self.setup_stores(data_type)
-            self.pre_build_datasets(data_type)
+            self.pre_build_datasets(data_type, 'model_bars', 'data_ds')
+
+            # self.pre_build_datasets(data_type, 'raw_bars', 'raw_ds')
 
         return
+
+    def create_store(self):
+        return {'train': {'close_bars': None,
+                          'model_bars': None,
+                          'x_bars': None,
+                          'y_bars': None,
+                          'c_bars': None,
+                          't_bars': None,
+                          'data_ds': None,
+                          'batch_data': None,
+                          'input_shp': None,
+                          'n_batches': None,
+                          'raw': {'full_bars': None,
+                                  'x_bars': None,
+                                  'y_bars': None,
+                                  'c_bars': None,
+                                  't_bars': None,
+                                  'data_ds': None},
+                          'config': {
+                              'batch_size': self.data.batch_size,
+                              'n_days': self.data.train_days,
+                              'n_batches': 0,
+                              'n_steps': 0,
+                              'n_samples': 0,
+                              'n_calls': 0,
+                              'masks': {'blocks': {'all_cols': [],
+                                                   'x_cols': [],
+                                                   'y_cols': [],
+                                                   't_cols': []}}}},
+                'test': {'close_bars': None,
+                         'model_bars': None,
+                         'data_ds': None,
+                         'batch_data': None,
+                         'input_shp': None,
+                         'n_batches': None,
+                         'raw': {'full_bars': None,
+                                 'x_bars': None,
+                                 'y_bars': None,
+                                 'c_bars': None,
+                                 't_bars': None,
+                                 'data_ds': None},
+                         'config': {
+                             'batch_size': self.data.batch_size,
+                             'n_days': self.data.test_days,
+                             'n_batches': 0,
+                             'n_steps': 0,
+                             'n_samples': 0,
+                             'n_calls': 0,
+                             'masks': {'blocks': {'all_cols': [],
+                                                  'x_cols': [],
+                                                  'y_cols': [],
+                                                  't_cols': []}}}},
+                'val': {'close_bars': None,
+                        'model_bars': None,
+                        'data_ds': None,
+                        'batch_data': None,
+                        'input_shp': None,
+                        'n_batches': None,
+                        'raw': {'full_bars': None,
+                                'x_bars': None,
+                                'y_bars': None,
+                                'c_bars': None,
+                                't_bars': None,
+                                'data_ds': None},
+                        'config': {
+                            'batch_size': self.data.batch_size,
+                            'n_days': self.data.val_days,
+                            'n_batches': 0,
+                            'n_steps': 0,
+                            'n_samples': 0,
+                            'n_calls': 0,
+                            'masks': {'blocks': {'all_cols': [],
+                                                 'x_cols': [],
+                                                 'y_cols': [],
+                                                 't_cols': []}}}}}
 
     def setup_data(self):
 
@@ -727,6 +743,9 @@ class Trees():
         self.data.store[data_type]['full_bars'] = full_bars
         self.data.store[data_type]['model_bars'] = model_bars
 
+        if self.data.save_raw:
+            self.data.store[data_type]['raw']['full_bars'] = full_bars.to_numpy()
+
         return
 
     def agg_bars(self, data_bars):
@@ -807,20 +826,20 @@ class Trees():
         return tf.data.Dataset.from_tensor_slices(tf.convert_to_tensor(x_bars,
                                                                        dtype=self.data.dtype))
 
-    def pre_build_datasets(self, data_type):
+    def pre_build_datasets(self, data_type, src, dest):
 
         batch_size = self.data.store[data_type]['config']['batch_size']
 
-        n_batches = int(self.data.store[data_type]['model_bars'].shape[0] / batch_size)
+        n_batches = int(self.data.store[data_type][src].shape[0] / batch_size)
 
         self.data.store[data_type]['n_batches'] = n_batches
 
         # -- splts -- #
 
-        self.data.store[data_type]['x_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['x_slice']]
-        self.data.store[data_type]['c_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['c_slice']]
-        self.data.store[data_type]['y_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['y_slice']]
-        self.data.store[data_type]['t_bars'] = self.data.store[data_type]['model_bars'][self.data.slice_configs['t_slice']]
+        self.data.store[data_type]['x_bars'] = self.data.store[data_type][src][self.data.slice_configs['x_slice']]
+        self.data.store[data_type]['c_bars'] = self.data.store[data_type][src][self.data.slice_configs['c_slice']]
+        self.data.store[data_type]['y_bars'] = self.data.store[data_type][src][self.data.slice_configs['y_slice']]
+        self.data.store[data_type]['t_bars'] = self.data.store[data_type][src][self.data.slice_configs['t_slice']]
 
         if 'c_cols' in self.data.f_cols:
             self.data.store[data_type]['x_bars'] = \
@@ -837,11 +856,11 @@ class Trees():
                                                                        dtype=self.data.dtype))
         if self.data.outputs_on:
             o_ds = self.setup_outputs_ds(data_type)
-            self.data.store[data_type]['data_ds'] = tf.data.Dataset.zip((x_ds, y_ds, t_ds, o_ds)).batch(batch_size)
+            self.data.store[data_type][dest] = tf.data.Dataset.zip((x_ds, y_ds, t_ds, o_ds)).batch(batch_size)
         else:
-            self.data.store[data_type]['data_ds'] = tf.data.Dataset.zip((x_ds, y_ds, t_ds)).batch(batch_size)
+            self.data.store[data_type][dest] = tf.data.Dataset.zip((x_ds, y_ds, t_ds)).batch(batch_size)
 
-        # self.data.store[data_type]['data_ds'] = self.data.store[data_type]['data_ds'].prefetch(10)
+        # self.data.store[data_type][dest] = self.data.store[data_type][dest].prefetch(10)
 
         return
 
@@ -1186,24 +1205,7 @@ class Gauge():
 
     def setup_loss_fn(self):
 
-        _loss_reduc = self.chain.loss_config['args']['reduction']
-        _loss_from_logits = self.chain.loss_config['args']['from_logits']
-
-        if _loss_reduc == 'NONE':
-            self.loss_fn = self.chain.loss_config['fn'](from_logits=_loss_from_logits,
-                                                        reduction=tf.keras.losses.Reduction.NONE)
-
-        if _loss_reduc == 'SUM':
-            self.loss_fn = self.chain.loss_config['fn'](from_logits=_loss_from_logits,
-                                                        reduction=tf.keras.losses.Reduction.SUM)
-
-        if _loss_reduc == 'AUTO':
-            self.loss_fn = self.chain.loss_config['fn'](from_logits=_loss_from_logits,
-                                                        reduction=tf.keras.losses.Reduction.AUTO)
-
-        if _loss_reduc == 'SUM_OVER_BATCH_SIZE':
-            self.loss_fn = self.chain.loss_config['fn'](from_logits=_loss_from_logits,
-                                                         reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE)
+        self.loss_fn = self.chain.loss_config['fn'](**self.chain.loss_config['args'])
 
     def compile_gauge(self, tree_idx):
 
@@ -1215,7 +1217,7 @@ class Gauge():
         self.metrics_fns = []
 
         for config in self.chain.metrics_config:
-            self.metrics_fns.append(config['fn'](config=config['args']))
+            self.metrics_fns.append(config['fn'].build_fn(config=config['args']))
 
         # -- compile model -- #
         self.src.compile(optimizer=self.opt_fn)
