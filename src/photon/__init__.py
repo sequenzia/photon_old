@@ -429,6 +429,8 @@ class Networks():
 
         rank: int = 2
 
+        seq_on: bool = False
+
 class Trees():
 
     def __init__(self,
@@ -501,6 +503,9 @@ class Trees():
         else:
             self.data.samples_pd = samples_pd
 
+        if self.data.seq_days:
+            self.data.seq_on = True
+
     def load_data(self):
 
         self.data.preproc_trans = {
@@ -538,8 +543,6 @@ class Trees():
         for data_type in self.types_on:
             self.setup_stores(data_type)
             self.pre_build_datasets(data_type, 'model_bars', 'data_ds')
-
-            # self.pre_build_datasets(data_type, 'raw_bars', 'raw_ds')
 
         return
 
@@ -699,13 +702,7 @@ class Trees():
         self.data.store[data_type]['config']['n_samples'] = \
             self.data.samples_pd * self.data.store[data_type]['config']['n_days']
 
-        close_bars = self.data.store[data_type]['close_bars']
-
         full_bars = self.data.store[data_type]['full_bars']
-
-        model_bars = []
-
-        n_bars = close_bars.shape[0]
 
         # -- aggregate full bars -- #
         if self.data.seq_agg > 1:
@@ -714,34 +711,12 @@ class Trees():
         # -- normalise full bars -- #
         full_bars = self.normalize_bars(full_bars)
 
-        # --- append seq bars to close bars to generate model bars --- #
-        for _idx in range(n_bars):
-
-            _bar = close_bars.iloc[_idx]
-
-            _st_idx = _bar['bar_idx'] - self.data.seq_len
-            _ed_idx = _bar['bar_idx']
-
-            seq_bars = full_bars[(full_bars['bar_idx'] > _st_idx) &
-                                 (full_bars['bar_idx'] <= _ed_idx)]
-
-            model_bars.append(seq_bars.to_numpy())
-
-        # -- concat model bars -- #
-        model_bars = np.concatenate(model_bars, axis=0)
-
-        # --- reshape seq bars ---  #
-        n_samples = self.data.store[data_type]['config']['n_samples']
-
-        seq_depth = int(model_bars.shape[0] / n_samples)
-
-        _new_shp = (n_samples, seq_depth, model_bars.shape[-1])
-
-        # -- reshape model bars -- #
-        model_bars = np.reshape(model_bars, _new_shp)
+        if self.data.seq_days:
+            self.data.store[data_type]['model_bars'] = self.seq_bars(full_bars, data_type)
+        else:
+            self.data.store[data_type]['model_bars'] = full_bars.to_numpy()
 
         self.data.store[data_type]['full_bars'] = full_bars
-        self.data.store[data_type]['model_bars'] = model_bars
 
         if self.data.save_raw:
             self.data.store[data_type]['raw']['full_bars'] = full_bars.to_numpy()
@@ -818,6 +793,38 @@ class Trees():
             data_bars[c_cols] = self.data.preproc_trans['train']['c_cols'].transform(data_bars[c_cols])
 
         return data_bars
+
+    def seq_bars(self, full_bars, data_type):
+
+        model_bars = []
+
+        close_bars = self.data.store[data_type]['close_bars']
+
+        n_bars = close_bars.shape[0]
+
+        # --- append seq bars to close bars to generate model bars --- #
+        for _idx in range(n_bars):
+            _bar = close_bars.iloc[_idx]
+
+            _st_idx = _bar['bar_idx'] - self.data.seq_len
+            _ed_idx = _bar['bar_idx']
+
+            seq_bars = full_bars[(full_bars['bar_idx'] > _st_idx) &
+                                 (full_bars['bar_idx'] <= _ed_idx)]
+
+            model_bars.append(seq_bars.to_numpy())
+
+        # -- concat model bars -- #
+        model_bars = np.concatenate(model_bars, axis=0)
+
+        # --- reshape seq bars ---  #
+        n_samples = self.data.store[data_type]['config']['n_samples']
+
+        seq_depth = int(model_bars.shape[0] / n_samples)
+
+        _new_shp = (n_samples, seq_depth, model_bars.shape[-1])
+
+        return np.reshape(model_bars, _new_shp)
 
     def setup_outputs_ds(self, data_type):
 
