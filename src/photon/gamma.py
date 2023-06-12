@@ -127,8 +127,8 @@ class Gamma():
             tracking = data[2]
             outputs = data[3]
 
-            if not chain.src.data_config['targets']['is_seq']:
-                targets = data[1][:, -1, :]
+            if not chain.src.data_config['targets']['is_seq'] and chain.src.trees[0].data.seq_on:
+                targets = data[1][..., -1, :]
 
             batch_data = {'inputs': inputs,
                           'targets': targets,
@@ -332,7 +332,6 @@ class Gamma():
         if tf.rank(step_data['step_loss']) > 0:
             step_data['step_loss'] = tf.nn.compute_average_loss(step_data['step_loss'],
                                                                 global_batch_size=model.chain.branch.src.trees[model.chain.live.tree_idx].data.batch_size)
-
         # -- model loss -- #
         step_data['model_loss'] = sum(model.src.losses)
 
