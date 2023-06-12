@@ -19,6 +19,9 @@ from tensorflow.keras import backend as K
 
 from sklearn import preprocessing
 
+from photon import metrics, losses, utils
+from photon.gamma import Gamma
+
 class Photon():
 
     def __init__(self, run_local: bool = False, mem_limit_on: bool = True, run_dir: Optional[str]=None) -> None:
@@ -27,14 +30,6 @@ class Photon():
         self.mem_limit_on = mem_limit_on
         self.run_dir = run_dir
         self.mod_dir = pathlib.Path(__file__).parent.parent
-
-        if not self.run_local:
-            from photon import metrics, losses, utils
-            from photon.gamma import Gamma
-        else:
-            sys.path.append(self.mod_dir)
-            from photon import metrics, losses, utils
-            from photon.gamma import Gamma
 
         self.Networks = Networks
         self.Trees = Trees
@@ -1224,7 +1219,8 @@ class Gauge():
         self.metrics_fns = []
 
         for config in self.chain.metrics_config:
-            self.metrics_fns.append(config['fn'].build_fn(config=config['args']))
+            # self.metrics_fns.append(config['fn'].build_fn(config=config['args']))
+            self.metrics_fns.append(config['fn'])
 
         # -- compile model -- #
         self.src.compile(optimizer=self.opt_fn)

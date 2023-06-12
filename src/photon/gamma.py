@@ -8,6 +8,9 @@ from photon.utils import list_idx_append
 from concurrent import futures
 from dataclasses import replace as dc_replace
 
+from photon.runs import setup_runs
+from photon.utils import dest_append, obj_exp
+
 def run_timer(func):
     @functools.wraps(func)
     def timer_wrapper(*args, **kwargs):
@@ -34,15 +37,6 @@ class Gamma():
 
         self.network = network
         self.photon = self.network.photon
-
-        if not self.photon.run_local:
-            from photon.runs import setup_runs
-            from photon.utils import dest_append, obj_exp
-        else:
-            sys.path.append(self.photon.mod_dir)
-            from photon.runs import setup_runs
-            from photon.utils import dest_append, obj_exp
-
         self.setup_runs = setup_runs
         self.dest_append = dest_append
         self.obj_exp = obj_exp
@@ -669,7 +663,7 @@ class Gamma():
         tf.print(branch.epoch_msg['footer'])
 
     def epoch_msg_body(self, branch, chain, chain_idx, chain_lr):
-        
+
         body_msg = f""
 
         if chain_idx > 0:

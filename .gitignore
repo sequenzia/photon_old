@@ -1,2 +1,3 @@
 /src/photon_ml.egg-info/
 /dist/
+**/*.pyc
