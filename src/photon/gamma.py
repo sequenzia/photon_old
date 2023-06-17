@@ -299,7 +299,6 @@ class Gamma():
             for idx in range(model.chain.config.n_metrics_fns):
 
                 metrics_fn = model.gauge.metrics_fns[idx]
-
                 step_data['metrics'][idx] = metrics_fn(step_data['y_true'], step_data['y_hat'], model.live.run_type)
 
         self.save_steps(model, step_data, batch_idx)
@@ -703,12 +702,13 @@ class Gamma():
             for idx in range(chain.config.n_metrics_fns):
                 main_acc = main_per_acc[idx]
 
-                if idx > 0:
-                    body_msg += f"\n\t\t\t\t"
+                # if idx > 0:
+                #     body_msg += f"\n\t\t\t\t"
 
-                body_msg += f" {np.mean(main_acc):.7f}"
+                body_msg += f" {np.mean(main_acc):.5f}"
+
                 if chain.n_models > 1:
-                    body_msg += f" ({np.std(main_acc):.7f})"
+                    body_msg += f" ({np.std(main_acc):.5f})"
 
         # --- val --- #
 
@@ -719,7 +719,7 @@ class Gamma():
             body_msg += f"\n"
             body_msg += f"\n\t\t -------- VAL -------- \n"
             body_msg += f"\n\t\t"
-            body_msg += f" Loss \t {np.mean(val_loss):.3f}"
+            body_msg += f" Loss \t {np.mean(val_loss):.5f}"
             if chain.n_models > 1:
                 body_msg += f" ({np.std(val_loss):.3f})"
 
@@ -735,10 +735,10 @@ class Gamma():
 
                     val_acc = val_per_acc[idx]
 
-                    if idx > 0:
-                        body_msg += f"\n\t\t\t\t"
+                    # if idx > 0:
+                    #     body_msg += f"\n\t\t\t\t"
 
-                    body_msg += f" {np.mean(val_acc):.3f}"
+                    body_msg += f" {np.mean(val_acc):.5f}"
                     if chain.n_models > 1:
                         body_msg += f" ({np.std(val_acc):.3f})"
 

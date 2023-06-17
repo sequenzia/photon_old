@@ -1219,8 +1219,7 @@ class Gauge():
         self.metrics_fns = []
 
         for config in self.chain.metrics_config:
-            # self.metrics_fns.append(config['fn'].build_fn(config=config['args']))
-            self.metrics_fns.append(config['fn'])
+            self.metrics_fns.append(config['fn'](config['args']))
 
         # -- compile model -- #
         self.src.compile(optimizer=self.opt_fn)
