@@ -677,15 +677,15 @@ class Gamma():
 
         main_loss = branch.epoch_msg['data'][chain_idx]['main_loss']
 
-        body_msg += f"\n\t\t -------- {type_hdr} -------- \n"
+        body_msg += f"\n\t -------- {type_hdr} -------- \n"
 
         if chain.live.run_type == 'fit':
-            body_msg += f"\n\t\t"
+            body_msg += f"\n\t"
             body_msg += f" ::: Avg LR {chain_lr:.7f} :::"
-            body_msg += f"\n\n\t\t"
+            body_msg += f"\n\n\t"
 
         if chain.live.run_type != 'fit':
-            body_msg += f"\n\t\t"
+            body_msg += f"\n\t"
 
         body_msg += f" Loss \t {np.mean(main_loss):.7f}"
 
@@ -696,14 +696,14 @@ class Gamma():
 
             main_per_acc = np.asarray(branch.epoch_msg['data'][chain_idx]['main_acc']['per_acc'])
 
-            body_msg += f"\n\t\t"
+            body_msg += f"\n\t"
             body_msg += f" Acc \t"
 
             for idx in range(chain.config.n_metrics_fns):
                 main_acc = main_per_acc[idx]
 
                 # if idx > 0:
-                #     body_msg += f"\n\t\t\t\t"
+                #     body_msg += f"\n\t"
 
                 body_msg += f" {np.mean(main_acc):.5f}"
 
@@ -717,8 +717,8 @@ class Gamma():
             val_loss = branch.epoch_msg['data'][chain_idx]['val_loss']
 
             body_msg += f"\n"
-            body_msg += f"\n\t\t -------- VAL -------- \n"
-            body_msg += f"\n\t\t"
+            body_msg += f"\n\t -------- VAL -------- \n"
+            body_msg += f"\n\t"
             body_msg += f" Loss \t {np.mean(val_loss):.5f}"
             if chain.n_models > 1:
                 body_msg += f" ({np.std(val_loss):.3f})"
@@ -728,7 +728,7 @@ class Gamma():
             if chain.config.metrics_on:
                 val_per_acc = np.asarray(branch.epoch_msg['data'][chain_idx]['val_acc']['per_acc'])
 
-                body_msg += f"\n\t\t"
+                body_msg += f"\n\t"
                 body_msg += f" Acc \t"
 
                 for idx in range(chain.config.n_metrics_fns):
@@ -736,7 +736,7 @@ class Gamma():
                     val_acc = val_per_acc[idx]
 
                     # if idx > 0:
-                    #     body_msg += f"\n\t\t\t\t"
+                    #     body_msg += f"\n\t"
 
                     body_msg += f" {np.mean(val_acc):.5f}"
                     if chain.n_models > 1:

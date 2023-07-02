@@ -226,8 +226,14 @@ class Models(tf_Model):
         self.rd_trans_on = config['trans_on']
         self.rd_squeeze_on = config['squeeze_on']
         self.rd_softmax_on = config['softmax_on']
-        
+
         self.rd_logs_on = config['logs_on']
+
+        print(f"\nconfig -> {config}\n")
+
+        print(f"{self.branch_idx} -> {self.rd_chain_idx}")
+
+        print(f"{self.gauge.runs[-1].branches[self.rd_branch_idx]}")
 
         # -- set the rd_chain -- #
         self.rd_chain = self.gauge.runs[-1].branches[self.rd_branch_idx].chains[self.rd_chain_idx]
@@ -249,9 +255,9 @@ class Models(tf_Model):
                                                  norm_args=None))
 
         return
-    
+
     def call_run_data(self, inputs):
-        
+
         batch_size = self.chain.trees[0].data.batch_size
         dtype = self.chain.trees[0].data.dtype
 
